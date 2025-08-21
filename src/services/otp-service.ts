@@ -1,4 +1,5 @@
 import { ImapFlow } from 'imapflow';
+import { simpleParser } from 'mailparser';
 import { EmailAccount, OTPRequest, OTPResponse } from '../types/gmail';
 import { getActiveAccounts, getAccountById } from '../config/email-accounts';
 
@@ -22,22 +23,45 @@ export class OTPService {
         return null;
       }
 
-      // Common OTP patterns (6 digits, 4 digits, or alphanumeric)
-      const otpPatterns = [
-        /\b\d{6}\b/g,           // 6 digit OTP
-        /\b\d{4}\b/g,           // 4 digit OTP
-        /\b[A-Z0-9]{5,8}\b/g,   // Alphanumeric OTP
+      // First try to find Thai bank specific OTP pattern
+      const thaiOtpPatterns = [
+        /รหัส\s*OTP\s*[:：]\s*(\d{4,8})/i,     // Thai: รหัส OTP : 123456
+        /OTP\s*code\s*[:：]\s*(\d{4,8})/i,     // English: OTP code: 123456
+        /verification\s*code\s*[:：]\s*(\d{4,8})/i // verification code: 123456
       ];
 
-      for (const pattern of otpPatterns) {
-        const matches = emailSource.match(pattern);
-        if (matches) {
-          // Return the first match found after the reference code
-          const refIndex = emailSource.indexOf(referenceCode);
-          const afterRef = emailSource.substring(refIndex);
-          const otpMatches = afterRef.match(pattern);
-          if (otpMatches) {
-            return otpMatches[0];
+      for (const pattern of thaiOtpPatterns) {
+        const match = emailSource.match(pattern);
+        if (match && match[1]) {
+          return match[1];
+        }
+      }
+
+      // Fallback to generic patterns but search near reference code
+      const refIndex = emailSource.indexOf(referenceCode);
+      if (refIndex !== -1) {
+        // Look within 200 characters before and after the reference code
+        const contextStart = Math.max(0, refIndex - 200);
+        const contextEnd = Math.min(emailSource.length, refIndex + 200);
+        const context = emailSource.substring(contextStart, contextEnd);
+
+        // Generic OTP patterns in context
+        const genericPatterns = [
+          /\b\d{6}\b/g,           // 6 digit OTP
+          /\b\d{4}\b/g,           // 4 digit OTP
+          /\b[A-Z0-9]{5,8}\b/g,   // Alphanumeric OTP
+        ];
+
+        for (const pattern of genericPatterns) {
+          const matches = context.match(pattern);
+          if (matches) {
+            // Filter out common non-OTP numbers
+            for (const match of matches) {
+              // Skip years (2020-2030), phone numbers, etc.
+              if (!/^(20[2-3]\d|02-|1\d{10})/.test(match)) {
+                return match;
+              }
+            }
           }
         }
       }
@@ -95,10 +119,36 @@ export class OTPService {
 
         // Search through messages for reference code and OTP
         for (const message of messages) {
-          const emailSource = message.source?.toString() || '';
+          const emailSource = (message as any).source?.toString() || '';
+          let emailContent = '';
           
-          if (emailSource.includes(referenceCode)) {
-            const otp = this.extractOTP(emailSource, referenceCode);
+          try {
+            // Use mailparser to properly parse the email
+            const parsed = await simpleParser(emailSource);
+            
+            // Get text content from parsed email
+            if (parsed.text) {
+              emailContent = parsed.text;
+            } else if (parsed.html) {
+              // If no text, use HTML and strip tags
+              emailContent = parsed.html
+                .replace(/<[^>]*>/g, ' ')
+                .replace(/&nbsp;/g, ' ')
+                .replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/\s+/g, ' ')
+                .trim();
+            }
+          } catch (error) {
+            console.log('Mail parsing failed, using fallback:', error);
+            // Fallback to searching the entire source
+            emailContent = emailSource;
+          }
+          
+          
+          if (emailContent.includes(referenceCode)) {
+            const otp = this.extractOTP(emailContent, referenceCode);
             
             if (otp) {
               return {
