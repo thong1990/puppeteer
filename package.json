@@ -7,12 +7,17 @@
     "start": "bun run src/index.ts",
     "dev": "bun --watch run src/index.ts",
     "build": "bun build src/index.ts --outdir ./dist --target bun",
-    "test": "bun test"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@types/node": "^24.3.0",
     "hono": "^4.9.2",
     "imapflow": "^1.0.194",
     "mailparser": "^3.7.4"
+  },
+  "devDependencies": {
+    "@vitest/ui": "^3.2.4",
+    "vitest": "^3.2.4"
   }
 }

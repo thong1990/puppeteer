@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { prettyJSON } from 'hono/pretty-json';
-import { OTPService } from './services/otp-service';
+import { getOTP } from './services/otp-service';
 import { getActiveAccounts } from './config/email-accounts';
 import type { OTPRequest } from './types/gmail';
 
@@ -16,8 +16,6 @@ app.use('*', cors({
   allowHeaders: ['Content-Type', 'Authorization'],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 }));
-
-const otpService = OTPService.getInstance();
 
 // Health check endpoint
 app.get('/', (c) => {
@@ -65,7 +63,7 @@ app.post('/otp', async (c) => {
       }, 400);
     }
 
-    const result = await otpService.getOTP(body);
+    const result = await getOTP(body);
     
     return c.json(result, result.success ? 200 : 404);
 
@@ -102,7 +100,7 @@ app.get('/otp/:referenceCode', async (c) => {
     }, 400);
   }
 
-  const result = await otpService.getOTP({
+  const result = await getOTP({
     referenceCode,
     accountIds,
     timeout
