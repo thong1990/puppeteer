@@ -1,0 +1,17 @@
+{
+  "name": "email-otp-retriever-imap",
+  "version": "1.0.0",
+  "description": "Bun Hono app to retrieve OTP from email accounts using IMAP and reference codes",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun --watch run src/index.ts",
+    "build": "bun build src/index.ts --outdir ./dist --target bun",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@types/node": "^24.3.0",
+    "hono": "^4.9.2",
+    "imapflow": "^1.0.194"
+  }
+}
