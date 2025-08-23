@@ -11,10 +11,15 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@hono/zod-openapi": "^1.1.0",
+    "@hono/zod-validator": "^0.7.2",
+    "@scalar/hono-api-reference": "^0.9.13",
     "@types/node": "^24.3.0",
     "hono": "^4.9.2",
     "imapflow": "^1.0.194",
-    "mailparser": "^3.7.4"
+    "mailparser": "^3.7.4",
+    "puppeteer": "^24.17.0",
+    "zod": "^4.0.17"
   },
   "devDependencies": {
     "@vitest/ui": "^3.2.4",
